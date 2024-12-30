@@ -1,4 +1,5 @@
 // src/components/AssetViewer.jsx
+
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -13,18 +14,33 @@ import {
   Badge,
   Snackbar,
   Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormControlLabel,
+  Switch,
   Stack,
   Tooltip
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ReplaceIcon from '@mui/icons-material/SwapHoriz';
 import AudioIcon from '@mui/icons-material/AudioFile';
 import FileIcon from '@mui/icons-material/InsertDriveFile';
-import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ImageIcon from '@mui/icons-material/Image';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import Animation3DIcon from '@mui/icons-material/Animation';
+
 import { scanProject } from '../utils/projectScanner';
 import { processFileReplacement, validateReplacement } from '../utils/base64Converter';
 
-function AssetCard({ asset, onReplace, onReplacementComplete }) {
+/**
+ * Individual Asset Card Component
+ */
+function AssetCard({
+  asset,
+  onReplace,
+  onReplacementComplete
+}) {
   const [preview, setPreview] = useState(null);
   const [replacing, setReplacing] = useState(false);
   const [error, setError] = useState(null);
@@ -34,7 +50,10 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
       try {
         const file = await asset.handle.getFile();
         if (asset.type === 'image' || asset.type === 'audio') {
-          setPreview(URL.createObjectURL(file));
+          const url = URL.createObjectURL(file);
+          setPreview(url);
+          // Cleanup
+          return () => URL.revokeObjectURL(url);
         }
       } catch (error) {
         console.error('Error loading preview:', error);
@@ -42,34 +61,22 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
     };
 
     loadPreview();
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
   }, [asset]);
 
   const handleReplace = async () => {
     try {
       setReplacing(true);
       setError(null);
+      // Call the prop function passed down from parent
       await onReplace(asset);
+      // Refresh the asset list after replacing
       onReplacementComplete();
     } catch (err) {
+      console.error(err);
       setError(err.message);
     } finally {
       setReplacing(false);
     }
-  };
-
-  const getStatusColor = () => {
-    if (!asset.hasBase64) return 'error';
-    if (!asset.inUse) return 'warning';
-    return 'success';
-  };
-
-  const getStatusText = () => {
-    if (!asset.hasBase64) return 'No Base64';
-    if (!asset.inUse) return 'Unused';
-    return 'In Use';
   };
 
   const renderPreview = () => {
@@ -100,9 +107,11 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
           <Box sx={{ p: 2, textAlign: 'center' }}>
             <AudioIcon sx={{ fontSize: 60, color: 'primary.main' }} />
             {preview && (
-              <audio controls style={{ width: '100%', marginTop: '8px' }}>
-                <source src={preview} type="audio/mpeg" />
-              </audio>
+              <audio
+                controls
+                style={{ width: '100%', marginTop: '8px' }}
+                src={preview}
+              />
             )}
           </Box>
         );
@@ -118,8 +127,8 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Badge
-        badgeContent={getStatusText()}
-        color={getStatusColor()}
+        badgeContent={asset.inUse ? 'In Use' : 'Unused'}
+        color={asset.inUse ? 'primary' : 'error'}
         sx={{
           '& .MuiBadge-badge': {
             right: 16,
@@ -154,25 +163,21 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
           <Chip
             label={asset.type}
             size="small"
-            color={asset.type === 'image' ? 'primary' : asset.type === 'audio' ? 'secondary' : 'default'}
+            color={
+              asset.type === 'image'
+                ? 'primary'
+                : asset.type === 'audio'
+                ? 'secondary'
+                : 'default'
+            }
           />
           {asset.hasBase64 ? (
             <Tooltip title="Base64 file exists">
-              <Chip
-                icon={<CheckCircleIcon />}
-                label="Base64"
-                size="small"
-                color="success"
-              />
+              <Chip label="Base64" size="small" color="success" />
             </Tooltip>
           ) : (
             <Tooltip title="Base64 file missing">
-              <Chip
-                icon={<WarningIcon />}
-                label="No Base64"
-                size="small"
-                color="error"
-              />
+              <Chip label="No Base64" size="small" color="error" />
             </Tooltip>
           )}
         </Stack>
@@ -186,85 +191,108 @@ function AssetCard({ asset, onReplace, onReplacementComplete }) {
   );
 }
 
+const categoryInfo = {
+  images: {
+    icon: <ImageIcon />,
+    title: 'Images',
+    empty: 'No images found'
+  },
+  audio: {
+    icon: <AudioIcon />,
+    title: 'Audio',
+    empty: 'No audio files found'
+  },
+  spine: {
+    icon: <Animation3DIcon />,
+    title: 'Spine Animations',
+    empty: 'No spine animations found'
+  },
+  fonts: {
+    icon: <TextFieldsIcon />,
+    title: 'Fonts',
+    empty: 'No fonts found'
+  }
+};
+
 export default function AssetViewer({ projectHandle }) {
-    const [assets, setAssets] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [notification, setNotification] = useState(null);
-    const [mediaHandle, setMediaHandle] = useState(null);
-    const [assetsHandle, setAssetsHandle] = useState(null);
-  
-    const loadAssets = async () => {
-      try {
-        setLoading(true);
-        const { assets, mediaHandle, assetsHandle } = await scanProject(projectHandle);
-        setAssets(assets);
-        setMediaHandle(mediaHandle);
-        setAssetsHandle(assetsHandle);
-      } catch (err) {
-        setError(err.message);
-        console.error('Error loading assets:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    useEffect(() => {
-      if (projectHandle) {
-        loadAssets();
-      }
-    }, [projectHandle]);
-  
-    const handleReplace = async (asset) => {
-      try {
-        const [fileHandle] = await window.showOpenFilePicker({
-          types: [
-            {
-              description: 'Asset Files',
-              accept: {
-                'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-                'audio/*': ['.mp3', '.wav'],
-              },
-            },
-          ],
-        });
-        
-        const file = await fileHandle.getFile();
-        const originalFile = await asset.handle.getFile();
-        
-        // Validate replacement
-        validateReplacement(originalFile, file);
-        
-        // Pass both mediaHandle and assetsHandle
-        const result = await processFileReplacement(
-          asset, 
-          file, 
-          mediaHandle,
-          assetsHandle
-        );
-        
-        console.log('Replacement result:', result);
-        
-        setNotification({
-          type: 'success',
-          message: 'Asset converted to Base64 successfully!'
-        });
-        
-        // Force a complete refresh
-        setTimeout(() => {
-          loadAssets();
-        }, 500);
-        
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Replacement error:', error);
-          setNotification({
-            type: 'error',
-            message: error.message || 'Failed to replace asset'
-          });
-        }
-      }
-    };
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [mediaHandle, setMediaHandle] = useState(null);
+  const [assetsHandle, setAssetsHandle] = useState(null);
+  const [showUnused, setShowUnused] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState('images');
+
+  const loadAssets = async () => {
+    try {
+      setLoading(true);
+      const result = await scanProject(projectHandle);
+      console.log('Loaded assets:', result);
+      setAssets(result.assets);
+      setMediaHandle(result.mediaHandle);
+      setAssetsHandle(result.assetsHandle);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading assets:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (projectHandle) {
+      loadAssets();
+    }
+  }, [projectHandle]);
+
+  /**
+   * The main replace function called from AssetCard
+   */
+  const handleReplace = async (asset) => {
+    try {
+      // 1) Let user pick a new file
+      const [fileHandle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [
+          {
+            description: 'Images or Audio',
+            accept: {
+              'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'],
+              'audio/*': ['.mp3', '.wav', '.ogg']
+            }
+          }
+        ]
+      });
+
+      const newFile = await fileHandle.getFile();
+
+      // 2) Validate file type (throw error if incompatible)
+      await validateReplacement(asset, newFile);
+
+      // 3) Convert & replace
+      await processFileReplacement(asset, newFile, mediaHandle, assetsHandle);
+
+      // 4) Show success notification
+      setNotification({ type: 'success', message: `Successfully replaced ${asset.name}` });
+    } catch (err) {
+      console.error('Error replacing asset:', err);
+      setNotification({ type: 'error', message: err.message });
+    }
+  };
+
+  // Filter assets based on "Show Unused" toggle
+  const filteredAssets = showUnused
+    ? assets
+    : assets.filter((asset) => asset.inUse);
+
+  // Categorize them
+  const categorizedAssets = {
+    images: filteredAssets.filter((asset) => asset.type === 'image'),
+    audio: filteredAssets.filter((asset) => asset.type === 'audio'),
+    spine: filteredAssets.filter((asset) => asset.type === 'spine'),
+    fonts: filteredAssets.filter((asset) => asset.type === 'font')
+  };
 
   if (loading) {
     return (
@@ -285,17 +313,58 @@ export default function AssetViewer({ projectHandle }) {
 
   return (
     <Box sx={{ flexGrow: 1, p: 2 }}>
-      <Grid container spacing={3}>
-        {assets.map((asset) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={asset.path}>
-            <AssetCard 
-              asset={asset} 
-              onReplace={handleReplace}
-              onReplacementComplete={loadAssets}
-            />
-          </Grid>
-        ))}
-      </Grid>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={showUnused}
+            onChange={(e) => setShowUnused(e.target.checked)}
+          />
+        }
+        label="Show Unused Assets"
+        sx={{ mb: 2 }}
+      />
+
+      {Object.entries(categoryInfo).map(([category, info]) => (
+        <Accordion
+          key={category}
+          expanded={expandedCategory === category}
+          onChange={() => setExpandedCategory(category)}
+          sx={{ mb: 1 }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {info.icon}
+              <Typography>{info.title}</Typography>
+              <Chip
+                label={categorizedAssets[category].length}
+                size="small"
+                sx={{ ml: 1 }}
+              />
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            {categorizedAssets[category].length > 0 ? (
+              <Grid container spacing={3}>
+                {categorizedAssets[category].map((asset) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={asset.path}>
+                    <AssetCard
+                      asset={asset}
+                      onReplace={handleReplace}
+                      onReplacementComplete={loadAssets}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Typography color="text.secondary" align="center">
+                {showUnused
+                  ? `No ${info.title.toLowerCase()} found`
+                  : `No used ${info.title.toLowerCase()} found`}
+              </Typography>
+            )}
+          </AccordionDetails>
+        </Accordion>
+      ))}
 
       <Snackbar
         open={!!notification}
@@ -304,8 +373,8 @@ export default function AssetViewer({ projectHandle }) {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         {notification && (
-          <Alert 
-            onClose={() => setNotification(null)} 
+          <Alert
+            onClose={() => setNotification(null)}
             severity={notification.type}
             sx={{ width: '100%' }}
           >

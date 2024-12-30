@@ -22,20 +22,6 @@ The Phaser Ad Tool is a specialized utility designed to streamline the asset man
    - Maintains export format compatibility
    - Automatic MIME type detection
 
-### Known Issues & Limitations
-1. Asset Detection Logic
-   - **Current Issue**: We're scanning preloader.js for imports, but these are already base64-encoded JS files
-   - **Needed Change**: Should scan public/assets folder first, then map to media/*.js files
-   - **Impact**: Currently showing incorrect usage status for some assets
-
-2. File Naming Convention
-   - **Current Issue**: Base64 encoder naming logic isn't properly synced with asset replacement
-   - **Fix Required**: Implement consistent naming strategy across original assets and converted files
-
-3. Preview Functionality
-   - **Current Issue**: Some previews don't load correctly
-   - **Fix Required**: Improve preview generation and caching
-
 ## Project Structure
 
 ### Core Files

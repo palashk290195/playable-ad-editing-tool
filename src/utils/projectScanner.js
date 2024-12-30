@@ -1,18 +1,24 @@
 // src/utils/projectScanner.js
 
 /**
- * Get base64 filename from original asset
+ * Gets the type of file based on extension
  */
-function getBase64Filename(originalPath) {
-    // Remove public/assets/ prefix
-    const cleanPath = originalPath.replace('public/assets/', '');
-    // Replace directory separators with underscores
-    return cleanPath.replace(/[\\/]/g, '_') + '.js';
+function getFileType(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+    const audioExts = ['mp3', 'wav', 'ogg'];
+    
+    if (imageExts.includes(ext)) return 'image';
+    if (audioExts.includes(ext)) return 'audio';
+    return 'other';
   }
   
-  /**
-   * Get camelCase export name from filename
-   */
+  function getBase64Filename(originalPath) {
+    return originalPath
+      .replace('public/assets/', '')
+      .replace(/[\\/]/g, '_') + '.js';
+  }
+  
   function getExportName(filename) {
     const name = filename.split('.')[0]
       .replace(/[-_\s]+(.)?/g, (_, c) => c ? c.toUpperCase() : '')
@@ -21,9 +27,77 @@ function getBase64Filename(originalPath) {
     return `${name}${ext}`;
   }
   
-  /**
-   * Scans a directory and returns all files recursively
-   */
+  async function analyzePreloader(fileHandle) {
+    const file = await fileHandle.getFile();
+    const content = await file.text();
+    
+    const imports = new Map();
+    const usedAudioVariables = new Set();
+  
+    // First pass: collect all non-commented imports
+    const importLines = content.split('\n')
+      .filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('/*'))
+      .join('\n');
+  
+    // Match import statements
+    const importRegex = /import\s*{\s*([^}]+)}\s*from\s*['"]([^'"]+)['"]/g;
+    let importMatch;
+    
+    while ((importMatch = importRegex.exec(importLines)) !== null) {
+      const variables = importMatch[1].split(',').map(v => v.trim());
+      const path = importMatch[2];
+      
+      variables.forEach(variable => {
+        imports.set(variable, {
+          path,
+          type: path.includes('audio_') ? 'audio' : 'other',
+          used: false
+        });
+      });
+    }
+  
+    // Find LoadBase64Audio usage
+    const audioLoaderRegex = /LoadBase64Audio\s*\([^,]+,\s*\[\s*((?:\{[^}]+\},?\s*)+)\]\s*\)/s;
+    const audioLoaderMatch = audioLoaderRegex.exec(content);
+    if (audioLoaderMatch) {
+      const audioContent = audioLoaderMatch[1];
+      const audioEntries = audioContent.matchAll(/{\s*key:\s*['"]([^'"]+)['"]\s*,\s*data:\s*([^,}\s]+)\s*}/g);
+      
+      for (const match of audioEntries) {
+        const variable = match[2].trim();
+        usedAudioVariables.add(variable);
+        console.log('Found used audio variable:', variable);
+      }
+    }
+  
+    // Find image loading usage
+    const imageLoads = content.matchAll(/this\.load\.(image|atlas)\(['"][^'"]+['"],\s*([^,\s)]+)/g);
+    for (const match of imageLoads) {
+      const variable = match[2].trim();
+      if (imports.has(variable)) {
+        imports.get(variable).used = true;
+      }
+    }
+  
+    // Mark audio variables as used
+    for (const variable of usedAudioVariables) {
+      if (imports.has(variable)) {
+        const importInfo = imports.get(variable);
+        importInfo.used = true;
+        importInfo.type = 'audio';
+        console.log('Marking audio as used:', variable);
+      }
+    }
+  
+    return {
+      imports: Array.from(imports.entries()).map(([exportName, info]) => ({
+        exportName,
+        ...info,
+      })),
+      usedAudioVariables: Array.from(usedAudioVariables)
+    };
+  }
+  
   async function scanDirectory(dirHandle, path = '') {
     const files = [];
     for await (const entry of dirHandle.values()) {
@@ -43,69 +117,6 @@ function getBase64Filename(originalPath) {
     return files;
   }
   
-  /**
-   * Gets the type of file based on extension
-   */
-  function getFileType(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
-    const audioExts = ['mp3', 'wav', 'ogg'];
-    
-    if (imageExts.includes(ext)) return 'image';
-    if (audioExts.includes(ext)) return 'audio';
-    return 'other';
-  }
-  
-  /**
-   * Extracts import statements from preloader.js
-   */
-  async function getPreloaderImports(fileHandle) {
-    const file = await fileHandle.getFile();
-    const content = await file.text();
-    
-    // Match both import types (direct and LoadBase64Audio)
-    const imports = [];
-    
-    // Match regular imports
-    const importRegex = /import\s*{\s*([^}]+)}\s*from\s*['"]([^'"]+)['"]/g;
-    let match;
-    
-    while ((match = importRegex.exec(content)) !== null) {
-      const variables = match[1].split(',').map(v => v.trim());
-      const path = match[2];
-      
-      variables.forEach(variable => {
-        imports.push({
-          variable: variable,
-          path: path,
-          type: 'direct'
-        });
-      });
-    }
-    
-    // Match LoadBase64Audio calls
-    const audioRegex = /LoadBase64Audio\([^{]*{([^}]+)}/g;
-    const audioEntryRegex = /{\s*key:\s*['"]([^'"]+)['"]\s*,\s*data:\s*([^,}\s]+)\s*}/g;
-    
-    while ((match = audioRegex.exec(content)) !== null) {
-      const audioContent = match[1];
-      let audioMatch;
-      
-      while ((audioMatch = audioEntryRegex.exec(audioContent)) !== null) {
-        imports.push({
-          key: audioMatch[1],
-          variable: audioMatch[2],
-          type: 'audio'
-        });
-      }
-    }
-    
-    return imports;
-  }
-  
-  /**
-   * Main function to scan project and return asset information
-   */
   export async function scanProject(projectHandle) {
     try {
       // Get directory handles
@@ -116,32 +127,34 @@ function getBase64Filename(originalPath) {
       const scenesHandle = await srcHandle.getDirectoryHandle('scenes');
       const preloaderHandle = await scenesHandle.getFileHandle('preloader.js');
   
-      // Scan directories
-      const originalAssets = await scanDirectory(assetsHandle);
-      const preloaderImports = await getPreloaderImports(preloaderHandle);
-      
-      // Create map of base64 files
+      // Analyze preloader.js
+      const { imports, usedAudioVariables } = await analyzePreloader(preloaderHandle);
+      console.log('Preloader analysis:', { imports, usedAudioVariables });
+  
+      // Create maps for quick lookup
+      const activeImports = new Map(imports.map(imp => [imp.exportName, imp]));
       const mediaFiles = await scanDirectory(mediaHandle);
       const base64Map = new Map(mediaFiles.map(file => [file.path, file]));
   
-      // Map original assets to their base64 versions and usage status
+      // Scan original assets
+      const originalAssets = await scanDirectory(assetsHandle);
+  
+      // Map assets with usage information
       const mappedAssets = originalAssets.map(asset => {
         const expectedBase64Path = getBase64Filename(asset.path);
         const expectedExportName = getExportName(asset.name);
-        
-        // Check if base64 version exists
         const base64File = base64Map.get(expectedBase64Path);
+        const importInfo = activeImports.get(expectedExportName);
+  
+        // Override type if it's a known audio file
+        const type = importInfo?.type === 'audio' ? 'audio' : asset.type;
         
-        // Check if it's being used in preloader
-        const isUsed = preloaderImports.some(imp => {
-          if (imp.type === 'audio') {
-            return imp.key === asset.name.split('.')[0] || imp.variable === expectedExportName;
-          }
-          return imp.variable === expectedExportName;
-        });
+        // Determine if the asset is used
+        const isUsed = importInfo?.used || false;
   
         return {
           ...asset,
+          type,
           base64File: base64File || null,
           expectedBase64Path,
           expectedExportName,
