@@ -1,0 +1,57 @@
+GOAL:
+Create a UI tool to manage assets in Phaser Ad projects that:
+1. Shows current assets and their usage status
+2. Enables easy asset replacement
+3. Handles Base64 conversion automatically
+4. Makes asset management more visual and efficient
+CURRENT IMPLEMENTATION:
+Files Structure:
+
+/src
+  /components
+    AssetViewer.jsx       (Main UI component)
+  /utils
+    projectScanner.js     (Project analysis)
+    base64Converter.js    (Asset conversion)
+
+Where We Are:
+1. ✅ Basic UI with project selection
+2. ✅ Asset categorization (Images, Audio, Spine, Fonts)
+3. ✅ Asset usage detection
+4. ✅ Base64 file handling
+5. ✅ Image preview support
+6. ✅ Audio preview support
+7. 🔄 Working on accurate usage detection for audio files
+Key Files & Functions:
+1. projectScanner.js:
+   - getFileType(): Determines file type (image/audio/etc)
+   - getBase64Filename(): Generates base64 JS filename
+   - getExportName(): Creates export variable name
+   - analyzePreloader(): Parses preloader.js to find used assets
+   - scanDirectory(): Recursively scans folders
+   - scanProject(): Main function coordinating analysis
+2. base64Converter.js:
+   - processFileReplacement(): Handles file replacement
+   - convertToBase64Export(): Converts file to base64
+   - validateReplacement(): Validates file type matches
+3. AssetViewer.jsx:
+   - Main UI component
+   - Handles asset display and categorization
+   - Provides file replacement interface
+   - Shows usage status and previews
+WHAT NEEDS TO BE DONE:
+2. Add preview panel for npm run dev output
+3. Add build generation functionality
+4. Add file backup functionality
+5. Add filtering options
+6. Improve error handling
+7. Add progress indicators for operations
+8. Add bulk operations support
+FUTURE ENHANCEMENTS:
+1. GitHub integration
+2. Web deployment
+3. Multi-project support
+4. Client access control
+5. Asset version control
+6. Advanced preview features
+Would you like me to elaborate on any specific part or should we proceed with implementing one of the pending items?

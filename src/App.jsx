@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { 
   Box, 
-  Container, 
   ThemeProvider, 
   createTheme,
   CssBaseline,
@@ -12,9 +11,12 @@ import {
   Button,
   Paper,
   Alert,
-  Divider
+  Divider,
+  Grid
 } from '@mui/material';
 import AssetViewer from './components/AssetViewer';
+import PreviewPanel from './components/PreviewPanel'; // Import the PreviewPanel
+
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 
 // Create theme
@@ -88,60 +90,69 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
-          {!projectPath ? (
-            <Paper 
-              sx={{ 
-                p: 4, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '300px'
-              }}
-            >
-              <Typography variant="h5" gutterBottom>
-                Select Your Phaser Ad Project
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<FolderOpenIcon />}
-                onClick={handleSelectFolder}
-                size="large"
-                sx={{ mt: 2 }}
-              >
-                Choose Project Folder
-              </Button>
-              {error && (
-                <Alert severity="error" sx={{ mt: 2, width: '100%', maxWidth: '500px' }}>
-                  {error}
-                </Alert>
-              )}
-            </Paper>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Project Info
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Selected project folder is ready for asset management.
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<FolderOpenIcon />}
-                  onClick={handleSelectFolder}
-                  size="small"
-                  sx={{ mt: 1 }}
+        <Box sx={{ flexGrow: 1, mt: 4, mb: 4 }}>
+          <Grid container spacing={2} sx={{ height: '100%' }}>
+            <Grid item xs={12} md={8} sx={{ overflow: 'auto' }}>
+              <PreviewPanel />
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ overflow: 'auto' }}>
+              {!projectPath ? (
+                <Paper 
+                  sx={{ 
+                    p: 4, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '300px'
+                  }}
                 >
-                  Change Project
-                </Button>
-              </Paper>
-              <Divider />
-              <AssetViewer projectHandle={projectPath} />
-            </Box>
-          )}
-        </Container>
+                  <Typography variant="h5" gutterBottom>
+                    Select Your Phaser Ad Project
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<FolderOpenIcon />}
+                    onClick={handleSelectFolder}
+                    size="large"
+                    sx={{ mt: 2 }}
+                  >
+                    Choose Project Folder
+                  </Button>
+                  {error && (
+                    <Alert severity="error" sx={{ mt: 2, width: '100%', maxWidth: '500px' }}>
+                      {error}
+                    </Alert>
+                  )}
+                </Paper>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Project Info
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Selected project folder is ready for asset management.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      startIcon={<FolderOpenIcon />}
+                      onClick={handleSelectFolder}
+                      size="small"
+                      sx={{ mt: 1 }}
+                    >
+                      Change Project
+                    </Button>
+                  </Paper>
+                  <Divider />
+                  <Box sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+                    <AssetViewer projectHandle={projectPath} />
+                  </Box>
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+        </Box>
       </Box>
     </ThemeProvider>
   );
