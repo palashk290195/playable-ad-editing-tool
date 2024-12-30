@@ -15,11 +15,10 @@ import {
   Grid
 } from '@mui/material';
 import AssetViewer from './components/AssetViewer';
-import PreviewPanel from './components/PreviewPanel'; // Import the PreviewPanel
-
+import PreviewPanel from './components/PreviewPanel';
+import ConfigEditor from './components/ConfigEditor';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 
-// Create theme
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -35,24 +34,17 @@ function App() {
 
   const handleSelectFolder = async () => {
     try {
-      // Request permission to access files
       const dirHandle = await window.showDirectoryPicker({
         mode: 'readwrite'
       });
 
-      // Verify project structure
       let isValidProject = false;
       
       try {
-        // Check for src/scenes/preloader.js
         const srcHandle = await dirHandle.getDirectoryHandle('src');
         const scenesHandle = await srcHandle.getDirectoryHandle('scenes');
         await scenesHandle.getFileHandle('preloader.js');
-        
-        // Check for media folder
         await dirHandle.getDirectoryHandle('media');
-        
-        // Check for public/assets folder
         const publicHandle = await dirHandle.getDirectoryHandle('public');
         await publicHandle.getDirectoryHandle('assets');
         
@@ -69,10 +61,7 @@ function App() {
       setProjectPath(dirHandle);
       setError(null);
     } catch (e) {
-      if (e.name === 'AbortError') {
-        // User cancelled the selection
-        return;
-      }
+      if (e.name === 'AbortError') return;
       setError('Failed to access folder. Please ensure you have the right permissions.');
       console.error('Folder selection error:', e);
     }
@@ -147,6 +136,7 @@ function App() {
                   <Divider />
                   <Box sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
                     <AssetViewer projectHandle={projectPath} />
+                    <ConfigEditor projectHandle={projectPath} />
                   </Box>
                 </Box>
               )}
