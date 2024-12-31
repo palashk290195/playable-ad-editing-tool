@@ -117,13 +117,15 @@ function getFileType(filename) {
     return files;
   }
   
-  export async function scanProject(projectHandle) {
+  export async function scanProject(projectContext) {
     try {
+      const dirHandle = projectContext.handle;
+      
       // Get directory handles
-      const publicHandle = await projectHandle.getDirectoryHandle('public');
+      const publicHandle = await dirHandle.getDirectoryHandle('public');
       const assetsHandle = await publicHandle.getDirectoryHandle('assets');
-      const mediaHandle = await projectHandle.getDirectoryHandle('media');
-      const srcHandle = await projectHandle.getDirectoryHandle('src');
+      const mediaHandle = await dirHandle.getDirectoryHandle('media');
+      const srcHandle = await dirHandle.getDirectoryHandle('src');
       const scenesHandle = await srcHandle.getDirectoryHandle('scenes');
       const preloaderHandle = await scenesHandle.getFileHandle('preloader.js');
   

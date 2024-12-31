@@ -192,59 +192,65 @@ function AssetCard({
 }
 
 const categoryInfo = {
-  images: {
-    icon: <ImageIcon />,
-    title: 'Images',
-    empty: 'No images found'
-  },
-  audio: {
-    icon: <AudioIcon />,
-    title: 'Audio',
-    empty: 'No audio files found'
-  },
-  spine: {
-    icon: <Animation3DIcon />,
-    title: 'Spine Animations',
-    empty: 'No spine animations found'
-  },
-  fonts: {
-    icon: <TextFieldsIcon />,
-    title: 'Fonts',
-    empty: 'No fonts found'
-  }
-};
-
-export default function AssetViewer({ projectHandle }) {
-  const [assets, setAssets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [notification, setNotification] = useState(null);
-  const [mediaHandle, setMediaHandle] = useState(null);
-  const [assetsHandle, setAssetsHandle] = useState(null);
-  const [showUnused, setShowUnused] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState('images');
-
-  const loadAssets = async () => {
-    try {
-      setLoading(true);
-      const result = await scanProject(projectHandle);
-      console.log('Loaded assets:', result);
-      setAssets(result.assets);
-      setMediaHandle(result.mediaHandle);
-      setAssetsHandle(result.assetsHandle);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error loading assets:', err);
-    } finally {
-      setLoading(false);
+    images: {
+      icon: <ImageIcon />,
+      title: 'Images',
+      empty: 'No images found'
+    },
+    audio: {
+      icon: <AudioIcon />,
+      title: 'Audio',
+      empty: 'No audio files found'
+    },
+    spine: {
+      icon: <Animation3DIcon />,
+      title: 'Spine Animations',
+      empty: 'No spine animations found'
+    },
+    fonts: {
+      icon: <TextFieldsIcon />,
+      title: 'Fonts',
+      empty: 'No fonts found'
     }
   };
 
-  useEffect(() => {
-    if (projectHandle) {
-      loadAssets();
-    }
-  }, [projectHandle]);
+export default function AssetViewer({ projectHandle }) {
+    const [assets, setAssets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [notification, setNotification] = useState(null);
+    const [mediaHandle, setMediaHandle] = useState(null);
+    const [assetsHandle, setAssetsHandle] = useState(null);
+    const [showUnused, setShowUnused] = useState(false);
+    const [expandedCategory, setExpandedCategory] = useState('images');
+  
+    const loadAssets = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        if (!projectHandle || !projectHandle.handle) {
+          throw new Error('Invalid project handle');
+        }
+  
+        const result = await scanProject(projectHandle);
+        console.log('Loaded assets:', result);
+        setAssets(result.assets);
+        setMediaHandle(result.mediaHandle);
+        setAssetsHandle(result.assetsHandle);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error loading assets:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    useEffect(() => {
+      if (projectHandle) {
+        loadAssets();
+      }
+    }, [projectHandle]);
 
   /**
    * The main replace function called from AssetCard

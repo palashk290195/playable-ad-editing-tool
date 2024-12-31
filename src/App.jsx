@@ -18,6 +18,8 @@ import AssetViewer from './components/AssetViewer';
 import PreviewPanel from './components/PreviewPanel';
 import ConfigEditor from './components/ConfigEditor';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import ExportIcon from '@mui/icons-material/CloudUpload';
+import ExportModal from './components/export/ExportModal';
 
 const theme = createTheme({
   palette: {
@@ -31,6 +33,7 @@ const theme = createTheme({
 function App() {
   const [projectPath, setProjectPath] = useState(null);
   const [error, setError] = useState(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const handleSelectFolder = async () => {
     try {
@@ -38,6 +41,9 @@ function App() {
         mode: 'readwrite'
       });
 
+      // Store both the directory handle and its name
+      console.log("Selected directory:", dirHandle.name);
+      
       let isValidProject = false;
       
       try {
@@ -58,13 +64,25 @@ function App() {
         return;
       }
 
-      setProjectPath(dirHandle);
+      // Store project context object with both handle and parent info
+      const projectContext = {
+        handle: dirHandle,
+        name: dirHandle.name,
+        // Since we know the parent is 'felcity-games'
+        parentDir: 'felcity-games'
+      };
+
+      setProjectPath(projectContext);
       setError(null);
     } catch (e) {
       if (e.name === 'AbortError') return;
       setError('Failed to access folder. Please ensure you have the right permissions.');
       console.error('Folder selection error:', e);
     }
+  };
+
+  const handleExport = () => {
+    setIsExportOpen(true);
   };
 
   return (
@@ -76,19 +94,30 @@ function App() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               Phaser Ad Tool
             </Typography>
+            {projectPath && (
+              <Button 
+                color="inherit" 
+                startIcon={<ExportIcon />}
+                onClick={handleExport}
+              >
+                Export
+              </Button>
+            )}
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ flexGrow: 1, mt: 4, mb: 4 }}>
-          <Grid container spacing={2} sx={{ height: '100%' }}>
-            <Grid item xs={12} md={8} sx={{ overflow: 'auto' }}>
-              <PreviewPanel />
-            </Grid>
-            <Grid item xs={12} md={4} sx={{ overflow: 'auto' }}>
-              {!projectPath ? (
+        <Box sx={{ flexGrow: 1, p: 2 }}>
+          {!projectPath ? (
+            // Initial layout with full-width preview
+            <Grid container spacing={2} sx={{ height: '100%' }}>
+              <Grid item xs={12} lg={8} sx={{ height: '100%' }}>
+                <PreviewPanel />
+              </Grid>
+              <Grid item xs={12} lg={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Paper 
                   sx={{ 
                     p: 4, 
+                    width: '100%',
                     display: 'flex', 
                     flexDirection: 'column', 
                     alignItems: 'center',
@@ -114,8 +143,16 @@ function App() {
                     </Alert>
                   )}
                 </Paper>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              </Grid>
+            </Grid>
+          ) : (
+            // Project selected layout
+            <Grid container spacing={2} sx={{ height: '100%' }}>
+              <Grid item xs={12} md={8} sx={{ height: '100%' }}>
+                <PreviewPanel />
+              </Grid>
+              <Grid item xs={12} md={4} sx={{ height: '100%', overflow: 'auto' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
                   <Paper sx={{ p: 2 }}>
                     <Typography variant="h6" gutterBottom>
                       Project Info
@@ -133,16 +170,23 @@ function App() {
                       Change Project
                     </Button>
                   </Paper>
-                  <Divider />
-                  <Box sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+                  <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
                     <AssetViewer projectHandle={projectPath} />
                     <ConfigEditor projectHandle={projectPath} />
                   </Box>
                 </Box>
-              )}
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </Box>
+
+        {projectPath && (
+          <ExportModal
+            open={isExportOpen}
+            onClose={() => setIsExportOpen(false)}
+            projectHandle={projectPath}
+          />
+        )}
       </Box>
     </ThemeProvider>
   );
