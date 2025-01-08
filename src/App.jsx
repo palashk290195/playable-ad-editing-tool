@@ -21,6 +21,10 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ExportIcon from '@mui/icons-material/CloudUpload';
 import ExportModal from './components/export/ExportModal';
 
+import { API_URL, OTHER_CONFIG } from './config';
+
+console.log('API URL:', API_URL);
+console.log('Other Config:', OTHER_CONFIG);
 const theme = createTheme({
   palette: {
     mode: 'light',
