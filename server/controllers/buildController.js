@@ -26,10 +26,8 @@ export const buildAd = async (req, res) => {
   }
 
   try {
-    // Construct full project path including parent directory if available
-    const projectPath = parentDir 
-      ? path.join(PROJECT_ROOT, parentDir, projectName)
-      : path.join(PROJECT_ROOT, projectName);
+    // Construct project path using PROJECT_ROOT environment variable
+    const projectPath = path.join(PROJECT_ROOT, projectName);
 
     console.log('Project path:', projectPath);
 

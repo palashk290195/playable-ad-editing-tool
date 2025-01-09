@@ -68,8 +68,8 @@ function App() {
       const projectContext = {
         handle: dirHandle,
         name: dirHandle.name,
-        // Since we know the parent is 'felcity-games'
-        parentDir: 'felcity-games'
+        // Parent directory is optional and will be determined by the server if needed
+        parentDir: null
       };
 
       setProjectPath(projectContext);
