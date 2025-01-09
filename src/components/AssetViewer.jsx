@@ -221,6 +221,7 @@ export default function AssetViewer({ projectHandle }) {
     const [notification, setNotification] = useState(null);
     const [mediaHandle, setMediaHandle] = useState(null);
     const [assetsHandle, setAssetsHandle] = useState(null);
+    const [publicHandle, setPublicHandle] = useState(null);
     const [showUnused, setShowUnused] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState('images');
   
@@ -238,6 +239,7 @@ export default function AssetViewer({ projectHandle }) {
         setAssets(result.assets);
         setMediaHandle(result.mediaHandle);
         setAssetsHandle(result.assetsHandle);
+        setPublicHandle(result.publicHandle);
       } catch (err) {
         setError(err.message);
         console.error('Error loading assets:', err);
@@ -277,7 +279,7 @@ export default function AssetViewer({ projectHandle }) {
       await validateReplacement(asset, newFile);
 
       // 3) Convert & replace
-      await processFileReplacement(asset, newFile, mediaHandle, assetsHandle);
+      await processFileReplacement(asset, newFile, mediaHandle, assetsHandle, publicHandle);
 
       // 4) Show success notification
       setNotification({ type: 'success', message: `Successfully replaced ${asset.name}` });

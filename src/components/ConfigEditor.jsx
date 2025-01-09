@@ -1,6 +1,6 @@
 // src/components/ConfigEditor.jsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -82,6 +82,37 @@ async function extractConfigFromJS(file) {
     console.error('Parse error:', e);
     throw new Error('Failed to parse config object');
   }
+}
+
+/**
+ * Number input component with local state management
+ */
+function NumberInput({ value, onChange, ...props }) {
+  const [inputValue, setInputValue] = useState(value.toString());
+
+  // Update local state when value prop changes (e.g. during undo/redo)
+  useEffect(() => {
+    setInputValue(value.toString());
+  }, [value]);
+
+  return (
+    <TextField
+      type="number"
+      step="any"
+      value={inputValue}
+      onChange={(e) => setInputValue(e.target.value)}
+      onBlur={(e) => {
+        const newVal = parseFloat(e.target.value);
+        if (!isNaN(newVal)) {
+          onChange(newVal);
+        } else {
+          // Reset to the last valid value if invalid
+          setInputValue(value.toString());
+        }
+      }}
+      {...props}
+    />
+  );
 }
 
 export default function ConfigEditor() {
@@ -239,6 +270,17 @@ export default function ConfigEditor() {
    * Renders a single value with a TextField for editing
    */
   const renderEditableValue = (value, path) => {
+    if (typeof value === 'number') {
+      return (
+        <NumberInput
+          value={value}
+          onChange={(newVal) => updateValue(path, newVal)}
+          size="small"
+          sx={{ ml: 1 }}
+        />
+      );
+    }
+
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
 
     return (
@@ -247,15 +289,10 @@ export default function ConfigEditor() {
         size="small"
         onChange={(e) => {
           let newVal = e.target.value;
-          if (typeof value === 'number') {
-            // coerce back to number
-            const parsed = Number(newVal);
-            if (!isNaN(parsed)) newVal = parsed;
-          } else if (typeof value === 'boolean') {
+          if (typeof value === 'boolean') {
             // coerce to boolean
             newVal = newVal.toLowerCase() === 'true';
           }
-          // For arrays or objects in string form, you'd have to parse them, but let's keep it simple
           updateValue(path, newVal);
         }}
         sx={{ ml: 1 }}

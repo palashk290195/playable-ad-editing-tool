@@ -7,16 +7,8 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Get PROJECT_ROOT from environment variables
-const PROJECT_ROOT = process.env.PROJECT_ROOT;
-
-if (!PROJECT_ROOT) {
-  console.error('PROJECT_ROOT environment variable is not set');
-  process.exit(1);
-}
-
 export const buildAd = async (req, res) => {
-  const { network, buildType, configPath, projectName, parentDir } = req.body;
+  const { network, buildType, configPath, projectName } = req.body;
 
   // Validate required fields
   if (!network || !buildType || !configPath || !projectName) {
@@ -26,11 +18,8 @@ export const buildAd = async (req, res) => {
   }
 
   try {
-    // Construct full project path including parent directory if available
-    const projectPath = parentDir 
-      ? path.join(PROJECT_ROOT, parentDir, projectName)
-      : path.join(PROJECT_ROOT, projectName);
-
+    // Use the project name directly as the path since we're already in the correct directory
+    const projectPath = projectName;
     console.log('Project path:', projectPath);
 
     // Verify project directory exists

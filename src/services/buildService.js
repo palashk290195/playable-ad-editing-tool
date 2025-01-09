@@ -119,8 +119,7 @@ export async function buildForNetwork(projectContext, network, buildName) {
           network,
           buildType: isMeta ? 'split' : 'inline',
           configPath,
-          projectName: projectContext.name,
-          parentDir: projectContext.parentDir
+          projectName: projectContext.name
         })
       });
   

@@ -168,7 +168,8 @@ function getFileType(filename) {
       return {
         assets: mappedAssets,
         mediaHandle,
-        assetsHandle
+        assetsHandle,
+        publicHandle
       };
     } catch (error) {
       console.error('Error scanning project:', error);

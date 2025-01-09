@@ -3,7 +3,7 @@
 /**
  * Process file replacement
  */
-export async function processFileReplacement(originalAsset, newFile, mediaHandle, assetsHandle) {
+export async function processFileReplacement(originalAsset, newFile, mediaHandle, assetsHandle, publicHandle) {
     try {
       console.log('Starting file replacement process');
       console.log('Original asset:', originalAsset);
@@ -11,6 +11,40 @@ export async function processFileReplacement(originalAsset, newFile, mediaHandle
       // Use the expected export name from the original asset
       const expectedExportName = originalAsset.expectedExportName;
       console.log('Using export name:', expectedExportName);
+
+      // Create backup directory if it doesn't exist
+      let backupHandle;
+      try {
+        try {
+          // Try to get existing backup directory first
+          backupHandle = await publicHandle.getDirectoryHandle('ad_editor_backup');
+        } catch {
+          // If it doesn't exist, create it
+          backupHandle = await publicHandle.getDirectoryHandle('ad_editor_backup', { create: true });
+        }
+      } catch (backupError) {
+        console.error('Error creating backup directory:', backupError);
+        throw new Error(`Failed to create backup directory: ${backupError.message}`);
+      }
+
+      // Create backup of the original file with path structure
+      try {
+        const originalFile = await originalAsset.handle.getFile();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '_');
+        
+        // Preserve the original path structure in the backup name
+        const pathWithoutPublicAssets = originalAsset.path.replace(/^public\/assets\//, '');
+        const backupName = `${timestamp}_${pathWithoutPublicAssets}`.replace(/\//g, '_');
+        
+        const backupFileHandle = await backupHandle.getFileHandle(backupName, { create: true });
+        const backupWritable = await backupFileHandle.createWritable();
+        await backupWritable.write(await originalFile.arrayBuffer());
+        await backupWritable.close();
+        console.log('Created backup:', backupName);
+      } catch (backupError) {
+        console.error('Error creating backup file:', backupError);
+        throw new Error(`Failed to create backup file: ${backupError.message}`);
+      }
       
       // Generate base64 export content using the expected name
       const base64Result = await convertToBase64Export(newFile, expectedExportName);
@@ -31,7 +65,7 @@ export async function processFileReplacement(originalAsset, newFile, mediaHandle
         console.error('Error writing base64 file:', writeError);
         throw new Error(`Failed to write base64 file: ${writeError.message}`);
       }
-  
+
       // Update the original file in public/assets
       try {
         // Split the path into segments

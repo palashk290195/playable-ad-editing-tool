@@ -64,12 +64,10 @@ function App() {
         return;
       }
 
-      // Store project context object with both handle and parent info
+      // Store project context object with handle
       const projectContext = {
         handle: dirHandle,
-        name: dirHandle.name,
-        // Since we know the parent is 'felcity-games'
-        parentDir: 'felcity-games'
+        name: dirHandle.name
       };
 
       setProjectPath(projectContext);
