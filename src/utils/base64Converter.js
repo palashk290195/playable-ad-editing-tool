@@ -17,10 +17,10 @@ export async function processFileReplacement(originalAsset, newFile, mediaHandle
       try {
         try {
           // Try to get existing backup directory first
-          backupHandle = await publicHandle.getDirectoryHandle('ad_editor_backup');
+          backupHandle = await publicHandle.getDirectoryHandle('replaced_by_assets');
         } catch {
           // If it doesn't exist, create it
-          backupHandle = await publicHandle.getDirectoryHandle('ad_editor_backup', { create: true });
+          backupHandle = await publicHandle.getDirectoryHandle('replaced_by_assets', { create: true });
         }
       } catch (backupError) {
         console.error('Error creating backup directory:', backupError);
@@ -34,7 +34,7 @@ export async function processFileReplacement(originalAsset, newFile, mediaHandle
         
         // Preserve the original path structure in the backup name
         const pathWithoutPublicAssets = originalAsset.path.replace(/^public\/assets\//, '');
-        const backupName = `${timestamp}_${pathWithoutPublicAssets}`.replace(/\//g, '_');
+        const backupName = `${pathWithoutPublicAssets}`.replace(/\//g, '_');
         
         const backupFileHandle = await backupHandle.getFileHandle(backupName, { create: true });
         const backupWritable = await backupFileHandle.createWritable();

@@ -33,7 +33,7 @@ const AD_NETWORKS = [
 // Validate build name - only allow alphanumeric, hyphens and underscores
 const isValidBuildName = (name) => /^[a-zA-Z0-9-_]+$/.test(name);
 
-export default function ExportModal({ open, onClose, projectHandle }) {
+export default function ExportModal({ open, onClose, projectContext }) {
   const [selectedNetworks, setSelectedNetworks] = useState([]);
   const [buildName, setBuildName] = useState('');
   const [buildNameError, setBuildNameError] = useState('');
@@ -62,8 +62,8 @@ export default function ExportModal({ open, onClose, projectHandle }) {
     
     // Check if build folder exists
     try {
-      // Fix: Access the handle property from projectContext
-      const dirHandle = projectHandle.handle;
+      // Get the directory handle from projectContext
+      const dirHandle = projectContext.handle;
       
       const tempHandle = await dirHandle.getDirectoryHandle('temp', { create: true });
       const buildsHandle = await tempHandle.getDirectoryHandle('playable-ad-builds', { create: true });
@@ -113,7 +113,7 @@ export default function ExportModal({ open, onClose, projectHandle }) {
       for (const network of selectedNetworks) {
         setBuildStatus(prev => ({ ...prev, [network]: 'building' }));
         try {
-          await buildForNetwork(projectHandle, network, buildName);
+          await buildForNetwork(projectContext, network, buildName);
           setBuildStatus(prev => ({ ...prev, [network]: 'complete' }));
         } catch (err) {
           console.error(`Build failed for ${network}:`, err);

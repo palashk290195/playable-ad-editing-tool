@@ -8,29 +8,34 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const buildAd = async (req, res) => {
-  const { network, buildType, configPath, projectName } = req.body;
+  const { network, buildType, configPath, projectName, adRootPath } = req.body;
 
   // Validate required fields
-  if (!network || !buildType || !configPath || !projectName) {
+  if (!network || !buildType || !configPath || !projectName || !adRootPath) {
     return res.status(400).json({ 
-      error: 'Missing required fields: network, buildType, configPath, projectName' 
+      error: 'Missing required fields: network, buildType, configPath, projectName, adRootPath' 
     });
   }
 
   try {
-    // Use the project name directly as the path since we're already in the correct directory
-    const projectPath = projectName;
-    console.log('Project path:', projectPath);
+    // Get the root directory (where server and vite configs are)
+    const rootDir = process.cwd();
+    // Project directory is the ad root path directly
+    const projectDir = adRootPath;
+    
+    console.log('Root directory:', rootDir);
+    console.log('Project directory:', projectDir);
+    console.log('Config path:', configPath);
 
-    // Verify project directory exists
-    if (!fs.existsSync(projectPath)) {
-      throw new Error(`Project directory not found: ${projectPath}`);
-    }
-
-    // Get absolute paths
-    const absoluteConfigPath = path.join(projectPath, configPath);
+    // Get absolute paths - config is in root, output is in project
+    const absoluteConfigPath = path.resolve(rootDir, configPath);
     const outDir = buildType === 'split' ? 'dist-split' : 'dist-inline';
-    const absoluteOutDir = path.join(projectPath, outDir);
+    const absoluteOutDir = path.resolve(projectDir, outDir);
+
+    // Ensure project directory exists
+    if (!fs.existsSync(projectDir)) {
+      throw new Error(`Project directory not found: ${projectDir}`);
+    }
 
     // Ensure config exists
     if (!fs.existsSync(absoluteConfigPath)) {
@@ -38,7 +43,6 @@ export const buildAd = async (req, res) => {
     }
 
     console.log(`Starting build for ${network} (${buildType})`);
-    console.log(`Project directory: ${projectPath}`);
     console.log(`Using config: ${absoluteConfigPath}`);
     console.log(`Output directory: ${absoluteOutDir}`);
 
@@ -48,24 +52,25 @@ export const buildAd = async (req, res) => {
     }
 
     try {
-      // Change to project directory
+      // Change to project directory for the build
       const originalCwd = process.cwd();
-      process.chdir(projectPath);
-      console.log('Changed working directory to:', projectPath);
+      process.chdir(projectDir);
+      console.log('Changed working directory to:', projectDir);
 
-      // Run Vite build
-      execSync(`vite build --config ${configPath}`, {
+      // Run Vite build with absolute config path
+      execSync(`vite build --config ${absoluteConfigPath}`, {
         stdio: 'inherit',
         env: {
           ...process.env,
           NETWORK: network,
-          BUILD_TYPE: buildType
+          BUILD_TYPE: buildType,
+          PROJECT_DIR: projectDir,
+          AD_ROOT_PATH: adRootPath
         }
       });
 
-      // Change back to original directory
+      // Change back to root directory
       process.chdir(originalCwd);
-      console.log('Restored working directory to:', originalCwd);
 
       // Verify build output exists
       if (!fs.existsSync(absoluteOutDir)) {

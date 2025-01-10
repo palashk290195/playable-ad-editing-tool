@@ -12,7 +12,8 @@ import {
   Paper,
   Alert,
   Divider,
-  Grid
+  Grid,
+  TextField
 } from '@mui/material';
 import AssetViewer from './components/AssetViewer';
 import PreviewPanel from './components/PreviewPanel';
@@ -30,73 +31,44 @@ const theme = createTheme({
   },
 });
 
-function App() {
-  const [projectPath, setProjectPath] = useState(null);
+export default function App() {
+  const [projectContext, setProjectContext] = useState(null);
   const [error, setError] = useState(null);
-  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [adRootPath, setAdRootPath] = useState('');
 
-  const handleSelectFolder = async () => {
+  const handleSelectProject = async () => {
     try {
-      const dirHandle = await window.showDirectoryPicker({
-        mode: 'readwrite'
-      });
-
-      // Store both the directory handle and its name
-      console.log("Selected directory:", dirHandle.name);
-      
-      let isValidProject = false;
-      
-      try {
-        const srcHandle = await dirHandle.getDirectoryHandle('src');
-        const scenesHandle = await srcHandle.getDirectoryHandle('scenes');
-        await scenesHandle.getFileHandle('preloader.js');
-        await dirHandle.getDirectoryHandle('media');
-        const publicHandle = await dirHandle.getDirectoryHandle('public');
-        await publicHandle.getDirectoryHandle('assets');
-        
-        isValidProject = true;
-      } catch (e) {
-        console.error('Project structure validation failed:', e);
-      }
-
-      if (!isValidProject) {
-        setError('Selected folder is not a valid Phaser ad project. Please ensure it contains the required structure.');
-        return;
-      }
-
-      // Store project context object with handle
-      const projectContext = {
-        handle: dirHandle,
-        name: dirHandle.name
-      };
-
-      setProjectPath(projectContext);
       setError(null);
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-      setError('Failed to access folder. Please ensure you have the right permissions.');
-      console.error('Folder selection error:', e);
+      const dirHandle = await window.showDirectoryPicker();
+      
+      // Store project context object with handle
+      setProjectContext({
+        handle: dirHandle,
+        name: dirHandle.name,
+        adRootPath // Store the ad root path with the project context
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setError('Failed to open project: ' + err.message);
+      }
     }
-  };
-
-  const handleExport = () => {
-    setIsExportOpen(true);
   };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <AppBar position="static">
           <Toolbar>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               Phaser Ad Tool
             </Typography>
-            {projectPath && (
+            {projectContext && (
               <Button 
                 color="inherit" 
                 startIcon={<ExportIcon />}
-                onClick={handleExport}
+                onClick={() => setExportOpen(true)}
               >
                 Export
               </Button>
@@ -104,90 +76,129 @@ function App() {
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ flexGrow: 1, p: 2 }}>
-          {!projectPath ? (
-            // Initial layout with full-width preview
-            <Grid container spacing={2} sx={{ height: '100%' }}>
-              <Grid item xs={12} lg={8} sx={{ height: '100%' }}>
-                <PreviewPanel />
-              </Grid>
-              <Grid item xs={12} lg={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Paper 
-                  sx={{ 
-                    p: 4, 
-                    width: '100%',
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '300px'
-                  }}
-                >
-                  <Typography variant="h5" gutterBottom>
-                    Select Your Phaser Ad Project
+        {!projectContext ? (
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center',
+              p: 4,
+              gap: 2
+            }}
+          >
+            <Paper sx={{ p: 3, maxWidth: 500, width: '100%' }}>
+              <Typography variant="h5" gutterBottom>
+                Select your Phaser Ad project
+              </Typography>
+              <TextField
+                fullWidth
+                label="Ad Root Folder Path"
+                placeholder="e.g., /Users/username/ads"
+                value={adRootPath}
+                onChange={(e) => setAdRootPath(e.target.value)}
+                margin="normal"
+                helperText="Enter the path to your ads root folder"
+              />
+              <Button
+                variant="contained"
+                startIcon={<FolderOpenIcon />}
+                onClick={handleSelectProject}
+                sx={{ mt: 2 }}
+              >
+                Select Project Folder
+              </Button>
+            </Paper>
+            {error && (
+              <Alert severity="error" sx={{ maxWidth: 500, width: '100%' }}>
+                {error}
+              </Alert>
+            )}
+          </Box>
+        ) : (
+          <Grid container sx={{ flexGrow: 1, height: 'calc(100vh - 64px)' }}>
+            {/* Left Panel - Assets and Config */}
+            <Grid item xs={12} md={3} sx={{ 
+              height: '100%', 
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column'
+              }}>
+                {/* Project Info */}
+                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Project: {projectContext.name}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<FolderOpenIcon />}
-                    onClick={handleSelectFolder}
-                    size="large"
-                    sx={{ mt: 2 }}
-                  >
-                    Choose Project Folder
-                  </Button>
-                  {error && (
-                    <Alert severity="error" sx={{ mt: 2, width: '100%', maxWidth: '500px' }}>
-                      {error}
-                    </Alert>
+                  {projectContext.adRootPath && (
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      Ad Root: {projectContext.adRootPath}
+                    </Typography>
                   )}
-                </Paper>
-              </Grid>
-            </Grid>
-          ) : (
-            // Project selected layout
-            <Grid container spacing={2} sx={{ height: '100%' }}>
-              <Grid item xs={12} md={8} sx={{ height: '100%' }}>
-                <PreviewPanel />
-              </Grid>
-              <Grid item xs={12} md={4} sx={{ height: '100%', overflow: 'auto' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Project Info
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Selected project folder is ready for asset management.
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      startIcon={<FolderOpenIcon />}
-                      onClick={handleSelectFolder}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    >
-                      Change Project
-                    </Button>
-                  </Paper>
-                  <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-                    <AssetViewer projectHandle={projectPath} />
-                    <ConfigEditor projectHandle={projectPath} />
+                </Box>
+
+                {/* Assets Section - Scrollable */}
+                <Box sx={{ 
+                  height: 'calc(100% - 400px)', // Subtract project info and config height
+                  overflow: 'auto'
+                }}>
+                  <AssetViewer projectHandle={projectContext} />
+                </Box>
+
+                {/* Config Section - Scrollable */}
+                <Box sx={{ 
+                  height: '300px', 
+                  overflow: 'auto',
+                  borderTop: '1px solid',
+                  borderColor: 'divider'
+                }}>
+                  <Box sx={{ p: 2 }}>
+                    <ConfigEditor projectHandle={projectContext} />
                   </Box>
                 </Box>
-              </Grid>
+              </Box>
             </Grid>
-          )}
-        </Box>
 
-        {projectPath && (
+            {/* Right Panel - Preview */}
+            <Grid item xs={12} md={9} sx={{ 
+              height: '100%',
+              bgcolor: 'grey.100'
+            }}>
+              <Box sx={{ 
+                height: '100%', 
+                overflow: 'auto',
+                p: 4,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Box sx={{ 
+                  maxWidth: '1200px', 
+                  width: '100%',
+                  minHeight: '1000px', // Accommodate iPad in both orientations
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}>
+                  <PreviewPanel projectHandle={projectContext} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+        )}
+
+        {projectContext && (
           <ExportModal
-            open={isExportOpen}
-            onClose={() => setIsExportOpen(false)}
-            projectHandle={projectPath}
+            open={exportOpen}
+            onClose={() => setExportOpen(false)}
+            projectContext={projectContext}
           />
         )}
       </Box>
     </ThemeProvider>
   );
 }
-
-export default App;

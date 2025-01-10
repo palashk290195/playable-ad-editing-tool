@@ -267,7 +267,7 @@ export default function AssetViewer({ projectHandle }) {
             description: 'Images or Audio',
             accept: {
               'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'],
-              'audio/*': ['.mp3', '.wav', '.ogg']
+              'audio/*': ['.mp3', '.wav', '.ogg', '.webm']
             }
           }
         ]
